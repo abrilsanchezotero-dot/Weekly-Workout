@@ -1,0 +1,20 @@
+EMERGENCY REPAIR — Recomp Studio+
+
+1. Upload every file in this folder to the ROOT of your existing recomp-studio-plus repository.
+2. Commit the files.
+3. Wait until the GitHub Pages deployment shows a green check.
+4. Open:
+
+   https://YOUR-USERNAME.github.io/recomp-studio-plus/repair.html
+
+5. The repair page removes the old service worker and Cache Storage.
+6. Your workout history and notes in localStorage are NOT deleted.
+7. It redirects automatically to the repaired app.
+
+Upload:
+- repair.html
+- index.html
+- app-v3.js
+- styles-v3.css
+- exercise-database-v3.js
+- routine-data-v3.js

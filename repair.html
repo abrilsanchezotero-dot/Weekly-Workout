@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFFAF2">
+  <title>Repairing Recomp Studio+</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #FFFAF2;
+      color: #555548;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(100%, 520px);
+      border: 1px solid #DCD4C1;
+      border-radius: 28px;
+      padding: 24px;
+      background: rgba(255,255,255,.82);
+      text-align: center;
+      box-shadow: 0 16px 42px rgba(85,85,72,.10);
+    }
+    h1 {
+      margin: 0 0 10px;
+      color: #818263;
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+    }
+    p { line-height: 1.55; }
+    .status {
+      margin-top: 16px;
+      border-radius: 999px;
+      padding: 11px 14px;
+      background: #EFD7CF;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p style="margin:0 0 5px;font-size:11px;letter-spacing:.12em;color:#818263;font-weight:800;">RECOMP STUDIO+</p>
+    <h1>Repairing the app</h1>
+    <p>This removes the old offline cache but keeps your workout history and notes.</p>
+    <div class="status" id="status">Clearing old files…</div>
+  </main>
+
+  <script>
+    (async function () {
+      var status = document.getElementById("status");
+
+      try {
+        if ("serviceWorker" in navigator) {
+          var registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(function (registration) {
+            return registration.unregister();
+          }));
+        }
+
+        if ("caches" in window) {
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function (key) {
+            return caches.delete(key);
+          }));
+        }
+
+        status.textContent = "Repair complete. Opening the app…";
+      } catch (error) {
+        status.textContent = "Old cache cleared as far as the browser allowed. Opening the app…";
+      }
+
+      setTimeout(function () {
+        location.replace("./index.html?repaired=" + Date.now());
+      }, 700);
+    })();
+  </script>
+</body>
+</html>

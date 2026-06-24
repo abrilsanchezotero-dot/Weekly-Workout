@@ -468,7 +468,7 @@ h2, h3, p { margin-top: 0; }
   bottom: 0;
   width: min(100%, 760px);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
   padding: 8px 8px calc(8px + var(--safe-bottom));
   border-top: 1px solid rgba(220,212,193,.8);
@@ -626,7 +626,7 @@ code {
 
 /* Recomp Studio+ */
 .bottom-nav {
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 2px;
 }
 .nav-item {
@@ -1270,4 +1270,177 @@ code {
 @media (min-width: 640px) {
   .summary-grid { grid-template-columns: repeat(4, 1fr); }
   .exercise-progress-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+
+/* Recomp Studio+ v2 */
+.tomorrow-card,
+.coach-hero,
+.coach-card,
+.coach-volume-card,
+.coach-ask-card {
+  border: 1px solid rgba(220,212,193,.86);
+  border-radius: 24px;
+  background: rgba(255,255,255,.74);
+  box-shadow: var(--shadow-soft);
+}
+
+.tomorrow-card {
+  display: grid;
+  gap: 13px;
+  padding: 17px;
+}
+.tomorrow-card h3 {
+  margin: 0 0 5px;
+  color: var(--c-sage);
+  font-family: var(--display);
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 600;
+}
+.tomorrow-card .secondary-btn { width: 100%; }
+
+.substitution-sheet { max-height: 92vh; }
+.replacement-section { margin-top: 16px; }
+.replacement-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--c-sage);
+  font-size: 12px;
+}
+.replacement-list { display: grid; gap: 7px; }
+.replacement-scroll {
+  max-height: 310px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.replacement-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid rgba(220,212,193,.88);
+  border-radius: 15px;
+  padding: 10px 11px;
+  background: rgba(255,255,255,.78);
+  color: var(--c-ink);
+  text-align: left;
+}
+.replacement-option span:first-child {
+  display: grid;
+  gap: 3px;
+}
+.replacement-option strong { color: var(--c-sage); }
+.replacement-option small { color: var(--c-ink-soft); font-size: 9px; }
+.replacement-equipment {
+  max-width: 95px;
+  color: #9c7165;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: right;
+}
+.custom-replacement {
+  display: grid;
+  gap: 8px;
+  margin-top: 17px;
+  border-top: 1px solid rgba(220,212,193,.75);
+  padding-top: 5px;
+}
+.reset-exercise-btn { margin-top: 12px; }
+.empty-state.compact { padding: 18px 10px; }
+
+.coach-hero {
+  padding: 20px;
+  background: linear-gradient(145deg, rgba(194,195,149,.2), rgba(255,255,255,.75));
+}
+.coach-hero h2 {
+  margin: 0 0 8px;
+  color: var(--c-sage);
+  font-family: var(--display);
+  font-size: 31px;
+  font-style: italic;
+  font-weight: 600;
+}
+.coach-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.coach-card { padding: 14px; }
+.coach-card h3 {
+  margin: 0 0 7px;
+  color: var(--c-sage);
+  font-size: 16px;
+  line-height: 1.2;
+}
+.coach-card p:last-child {
+  margin: 0;
+  color: var(--c-ink-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.coach-volume-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.muscle-volume-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0,1fr) 30px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.muscle-volume-row > span:first-child {
+  overflow: hidden;
+  color: var(--c-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.muscle-volume-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(220,212,193,.55);
+}
+.muscle-volume-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--c-blush), var(--c-sage));
+}
+.muscle-volume-row strong {
+  color: var(--c-sage);
+  text-align: right;
+}
+.coach-ask-card { padding: 17px; }
+.coach-question-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 13px 0;
+}
+.coach-question-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  margin-bottom: 11px;
+  border: 1px solid rgba(220,212,193,.95);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,.84);
+  color: var(--c-ink);
+  line-height: 1.45;
+}
+.sound-help { margin: 8px 0 0; }
+
+@media (max-width: 390px) {
+  .nav-item { font-size: 8px; }
+  .nav-icon { font-size: 14px; }
+  .coach-grid { grid-template-columns: 1fr; }
+  .replacement-equipment { max-width: 78px; }
 }

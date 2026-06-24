@@ -1,8 +1,9 @@
-const CACHE_NAME = "recomp-studio-plus-v1";
+const CACHE_NAME = "recomp-studio-plus-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./exercise-database.js",
   "./routine-data.js",
   "./app.js",
   "./manifest.json",

@@ -1,45 +1,25 @@
-# Recomp Studio+
+# Recomp Studio+ v2
 
-A new, standalone version of the workout app.
+## New in this version
 
-## Included features
+- Today now shows both **Today** and **Tomorrow**.
+- Exercise replacement uses a searchable library of common commercial-gym exercises.
+- Replacement recommendations prioritize the same muscle and movement pattern.
+- You can still enter a completely custom exercise.
+- History keeps the original routine slot and the performed exercise separate:
+  - Romanian Deadlift history is not mixed with Leg Press history.
+  - A selected replacement builds its own exercise history.
+  - Custom exercise names are tracked separately.
+- Timer sound uses a reusable audio session and a two-tone chime.
+- Settings includes **Enable & test timer sound**.
+- New **Coach** tab:
+  - local muscle and movement analysis,
+  - programmed set distribution,
+  - routine priorities and possible blind spots,
+  - prompt builder that copies your routine context and opens ChatGPT.
 
-- English interface.
-- Rest timer with **−15** and **+15 seconds**.
-- Five navigation tabs with a visible Routines icon.
-- Routine buttons say **Start workout**.
-- Current-week dated planner.
-- Calendar with:
-  - completed workouts,
-  - free-text day notes,
-  - structured activities such as walks, Pilates, mobility, cardio, and sport.
-- Every working set records **Kg · Reps · RIR**.
-- Notes for every exercise.
-- “Last time” shows previous sets, RIR, substitution, and exercise note.
-- Temporary exercise substitutions saved in workout history.
-- Exercise-specific history, load trend, and personal records.
-- Weekly summary with comparison to the previous week.
-- Program editor inside the app:
-  - rename workouts,
-  - edit sets,
-  - edit rep ranges,
-  - edit rest times,
-  - reorder exercises,
-  - add or delete exercises,
-  - edit travel alternatives.
-- Offline support.
-- JSON backup export and import.
+## About the Coach tab
 
-## GitHub repository name
+The local analysis works offline. The free-text “Ask AI” button does not expose an API key in the browser. It copies a detailed prompt and opens ChatGPT, where you can paste it.
 
-Recommended:
-
-`recomp-studio-plus`
-
-## Important
-
-This version uses a new storage key, so it starts as a separate app. To move data from an older Recomp Studio page:
-
-1. Export a JSON backup from the old app.
-2. Open Recomp Studio+.
-3. Go to Settings → Import backup.
+A fully embedded AI chat would require a secure server-side endpoint and API usage.

@@ -2,6 +2,8 @@
   "use strict";
 
   const BASE = window.ROUTINE_DATA;
+  const EXERCISES = Array.isArray(window.EXERCISE_LIBRARY) ? window.EXERCISE_LIBRARY : [];
+  const EXERCISE_MAP = new Map(EXERCISES.map(exercise => [exercise.id, exercise]));
   const STORAGE_KEY = "recomp-studio-plus-v1";
 
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -51,6 +53,9 @@
     interval: null,
     endAt: null
   };
+
+  let audioContext = null;
+  let audioUnlocked = false;
 
   const main = document.getElementById("main-content");
   const title = document.getElementById("page-title");
@@ -173,12 +178,15 @@
       exercises: { ...(session?.exercises || {}) }
     };
 
-    Object.entries(normalized.exercises).forEach(([exerciseId, exerciseState]) => {
-      normalized.exercises[exerciseId] = {
+    Object.entries(normalized.exercises).forEach(([slotExerciseId, exerciseState]) => {
+      const fallback = getExerciseDefinition(slotExerciseId);
+      normalized.exercises[slotExerciseId] = {
         ...exerciseState,
-        originalName: exerciseState?.originalName || exerciseState?.name || getExerciseDefinition(exerciseId)?.name || "Exercise",
-        performedName: exerciseState?.performedName || exerciseState?.name || getExerciseDefinition(exerciseId)?.name || "Exercise",
-        equipment: exerciseState?.equipment || "",
+        originalExerciseId: exerciseState?.originalExerciseId || slotExerciseId,
+        performedExerciseId: exerciseState?.performedExerciseId || slotExerciseId,
+        originalName: exerciseState?.originalName || exerciseState?.name || fallback?.name || "Exercise",
+        performedName: exerciseState?.performedName || exerciseState?.name || fallback?.name || "Exercise",
+        equipment: exerciseState?.equipment || fallback?.equipment || "",
         notes: exerciseState?.notes || "",
         sets: Array.isArray(exerciseState?.sets)
           ? exerciseState.sets.map(set => ({
@@ -245,16 +253,64 @@
       const exercise = getRoutine(routineId)?.exercises.find(item => item.id === exerciseId);
       if (exercise) return exercise;
     }
+
+    const libraryItem = EXERCISE_MAP.get(exerciseId);
+    if (libraryItem) {
+      return {
+        ...libraryItem,
+        sets: 3,
+        reps: "8–12",
+        targetMin: 8,
+        targetMax: 12,
+        rest: 60,
+        travel: "",
+        group: ""
+      };
+    }
+
+    for (const session of state.history) {
+      for (const exerciseState of Object.values(session.exercises || {})) {
+        if (exerciseState.performedExerciseId === exerciseId) {
+          return {
+            id: exerciseId,
+            name: exerciseState.performedName || "Custom exercise",
+            equipment: exerciseState.equipment || "Custom",
+            sets: exerciseState.sets?.length || 3,
+            reps: "Custom",
+            targetMin: 0,
+            targetMax: 0,
+            rest: 60,
+            travel: "",
+            group: ""
+          };
+        }
+      }
+    }
+
     return null;
   }
 
   function allProgramExercises() {
     const seen = new Map();
+
     state.program.cycle.forEach(routineId => {
       getRoutine(routineId)?.exercises.forEach(exercise => {
         if (!seen.has(exercise.id)) seen.set(exercise.id, exercise);
       });
     });
+
+    state.history.forEach(session => {
+      Object.values(session.exercises || {}).forEach(exerciseState => {
+        const performedId = exerciseState.performedExerciseId || exerciseState.originalExerciseId;
+        if (!performedId || seen.has(performedId)) return;
+        seen.set(performedId, getExerciseDefinition(performedId) || {
+          id: performedId,
+          name: exerciseState.performedName || "Custom exercise",
+          equipment: exerciseState.equipment || "Custom"
+        });
+      });
+    });
+
     return [...seen.values()];
   }
 
@@ -323,6 +379,7 @@
     if (currentView === "today") renderToday();
     if (currentView === "routines") renderRoutines();
     if (currentView === "calendar") renderCalendar();
+    if (currentView === "coach") renderCoach();
     if (currentView === "history") renderProgress();
     if (currentView === "settings") renderSettings();
     if (currentView === "workout") renderWorkout();
@@ -335,8 +392,14 @@
   // -------------------------
   function renderToday() {
     title.textContent = "Today";
-    const scheduled = getScheduledItem();
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const scheduled = getScheduledItem(today);
     const nextId = nextRoutineId();
+    const tomorrowBlock = renderTomorrowBlock(tomorrow);
 
     if (state.currentSession) {
       const routine = getRoutine(state.currentSession.routineId);
@@ -351,18 +414,20 @@
           </div>
           <button class="primary-btn" id="resume-workout" type="button">Continue workout</button>
         </section>
-        ${renderNextRoutineBlock(nextId, "Up next")}
+        ${tomorrowBlock}
       `;
-      document.getElementById("resume-workout").onclick = () => setView("workout");
+      document.getElementById("resume-workout").onclick = () => {
+        ensureAudioReady();
+        setView("workout");
+      };
       wireStartButtons();
-      wireExerciseHistoryButtons();
       return;
     }
 
     if (scheduled === "rest" || !getRoutine(scheduled)) {
       main.innerHTML = `
         <section class="recovery-card">
-          <p class="kicker">${escapeHtml(fmt.today.format(new Date()))}</p>
+          <p class="kicker">Today · ${escapeHtml(fmt.today.format(today))}</p>
           <h2>${escapeHtml(BASE.recovery.title)}</h2>
           <p class="muted">No programmed strength session is scheduled for today.</p>
           <div class="recovery-list">
@@ -370,12 +435,12 @@
           </div>
           <button class="secondary-btn" id="quick-activity" type="button" style="margin-top:14px">Log another activity</button>
         </section>
-        <div class="section-heading"><h2>Next workout</h2><span>Flexible cycle</span></div>
+        ${tomorrowBlock}
+        <div class="section-heading"><h2>Next in your cycle</h2><span>Flexible plan</span></div>
         ${routinePreview(nextId)}
       `;
       document.getElementById("quick-activity").onclick = () => openActivityModal(todayKey());
       wireStartButtons();
-      wireExerciseHistoryButtons();
       return;
     }
 
@@ -384,7 +449,7 @@
 
     main.innerHTML = `
       <section class="hero-card">
-        <p class="kicker">${escapeHtml(fmt.today.format(new Date()))}</p>
+        <p class="kicker">Today · ${escapeHtml(fmt.today.format(today))}</p>
         <h2 class="hero-title">${isDone ? "Workout complete" : escapeHtml(routine.name)}</h2>
         <p class="hero-subtitle">${isDone ? `You already logged ${escapeHtml(routine.name)} today.` : escapeHtml(routine.focus)}</p>
         <div class="hero-meta">
@@ -396,11 +461,42 @@
           ${isDone ? `Start ${escapeHtml(getRoutine(nextId)?.name || "next workout")}` : "Start workout"}
         </button>
       </section>
-      ${scheduled !== nextId ? renderNextRoutineBlock(nextId, "Next in your cycle") : ""}
+      ${tomorrowBlock}
     `;
 
     wireStartButtons();
-    wireExerciseHistoryButtons();
+  }
+
+  function renderTomorrowBlock(date) {
+    const routineId = getScheduledItem(date);
+    const routine = getRoutine(routineId);
+
+    return `
+      <div class="section-heading">
+        <h2>Tomorrow</h2>
+        <span>${escapeHtml(fmt.today.format(date))}</span>
+      </div>
+      <article class="tomorrow-card">
+        ${routine ? `
+          <div>
+            <p class="kicker">Planned workout</p>
+            <h3>${escapeHtml(routine.name)}</h3>
+            <p class="muted">${escapeHtml(routine.focus)}</p>
+            <div class="hero-meta">
+              <span class="chip">${routine.exercises.length} exercises</span>
+              <span class="chip">≈ ${routine.estimatedMinutes} min</span>
+            </div>
+          </div>
+          <button class="secondary-btn" data-start="${routineId}" type="button">Start workout</button>
+        ` : `
+          <div>
+            <p class="kicker">Planned day</p>
+            <h3>Rest / recovery</h3>
+            <p class="muted">You can change tomorrow’s plan in Settings → This week.</p>
+          </div>
+        `}
+      </article>
+    `;
   }
 
   function renderNextRoutineBlock(routineId, label) {
@@ -480,6 +576,8 @@
     const routine = getRoutine(routineId);
     if (!routine) return;
 
+    ensureAudioReady();
+
     if (state.currentSession && state.currentSession.routineId !== routineId) {
       if (!confirm("Another workout is already in progress. Replace it?")) return;
     }
@@ -488,12 +586,19 @@
       const exercises = {};
 
       routine.exercises.forEach(exercise => {
-        const latest = getLastExercisePerformance(exercise.id);
-        const performedName = state.settings.travelMode && exercise.travel ? exercise.travel : exercise.name;
+        const initialPerformedId = state.settings.travelMode && exercise.travel
+          ? `custom:${slugify(exercise.travel)}`
+          : exercise.id;
+        const initialPerformedName = state.settings.travelMode && exercise.travel
+          ? exercise.travel
+          : exercise.name;
+        const latest = getLastExercisePerformance(initialPerformedId);
 
         exercises[exercise.id] = {
+          originalExerciseId: exercise.id,
+          performedExerciseId: initialPerformedId,
           originalName: exercise.name,
-          performedName,
+          performedName: initialPerformedName,
           equipment: exercise.equipment,
           notes: "",
           sets: Array.from({ length: exercise.sets }, (_, index) => ({
@@ -573,9 +678,11 @@
   function exerciseCard(exercise, index, session) {
     const exerciseState = session.exercises[exercise.id];
     if (!exerciseState) return "";
+
     const complete = exerciseState.sets.every(set => set.done);
-    const last = getLastExercisePerformance(exercise.id);
-    const isSubstituted = exerciseState.performedName !== exerciseState.originalName;
+    const performedId = exerciseState.performedExerciseId || exercise.id;
+    const last = getLastExercisePerformance(performedId);
+    const isSubstituted = performedId !== exercise.id || exerciseState.performedName !== exerciseState.originalName;
     const suggestion = progressionSuggestion(exercise, last);
 
     return `
@@ -592,7 +699,7 @@
 
         <div class="exercise-actions">
           <button class="text-btn" data-replace-exercise="${exercise.id}" type="button">Replace exercise</button>
-          <button class="text-btn" data-history-exercise="${exercise.id}" type="button">View history</button>
+          <button class="text-btn" data-history-exercise="${escapeHtml(performedId)}" type="button">View history</button>
         </div>
 
         ${lastPerformanceBlock(last)}
@@ -696,6 +803,7 @@
     main.querySelectorAll("[data-toggle-set]").forEach(button => {
       button.addEventListener("click", event => {
         const { exercise, set, rest } = event.currentTarget.dataset;
+        ensureAudioReady();
         const item = state.currentSession.exercises[exercise].sets[Number(set)];
         item.done = !item.done;
         saveState();
@@ -771,13 +879,16 @@
     const sessions = [...state.history].sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
 
     for (const session of sessions) {
-      if (session.exercises?.[exerciseId]) {
-        return {
-          ...session.exercises[exerciseId],
-          completedAt: session.completedAt,
-          date: session.date,
-          routineId: session.routineId
-        };
+      for (const [slotId, exerciseState] of Object.entries(session.exercises || {})) {
+        const performedId = exerciseState.performedExerciseId || exerciseState.originalExerciseId || slotId;
+        if (performedId === exerciseId) {
+          return {
+            ...exerciseState,
+            completedAt: session.completedAt,
+            date: session.date,
+            routineId: session.routineId
+          };
+        }
       }
     }
 
@@ -787,64 +898,165 @@
   // -------------------------
   // Exercise substitution
   // -------------------------
-  function openSubstitutionModal(exerciseId) {
-    const definition = getExerciseDefinition(exerciseId);
-    const current = state.currentSession?.exercises?.[exerciseId];
+  function openSubstitutionModal(slotExerciseId) {
+    const definition = getExerciseDefinition(slotExerciseId);
+    const current = state.currentSession?.exercises?.[slotExerciseId];
     if (!definition || !current) return;
 
-    const last = getLastExercisePerformance(exerciseId);
-    const lastAlternative = last?.performedName && last.performedName !== last.originalName
-      ? last.performedName
-      : "";
+    const recommendations = recommendedAlternatives(slotExerciseId);
 
     openModal(`
-      <div class="modal-sheet">
+      <div class="modal-sheet substitution-sheet">
         <div class="modal-head">
           <div>
-            <p class="kicker">Temporary substitution</p>
+            <p class="kicker">Exercise library</p>
             <h2>Replace ${escapeHtml(definition.name)}</h2>
           </div>
           <button class="modal-close" data-close-modal type="button">×</button>
         </div>
 
-        <p class="muted">This only changes the current session. The alternative will be saved in your history.</p>
+        <p class="muted">Recommended options preserve the same muscle or movement pattern. Your history will track the replacement separately from the original exercise.</p>
 
-        <div class="modal-option-list">
-          ${definition.travel ? `<button class="secondary-btn modal-option" data-use-substitute="${escapeHtml(definition.travel)}" type="button">Use travel alternative<br><small>${escapeHtml(definition.travel)}</small></button>` : ""}
-          ${lastAlternative ? `<button class="secondary-btn modal-option" data-use-substitute="${escapeHtml(lastAlternative)}" type="button">Use last alternative<br><small>${escapeHtml(lastAlternative)}</small></button>` : ""}
-          <button class="secondary-btn modal-option" data-use-original type="button">Use original exercise</button>
+        <label class="form-label" for="exercise-search">Search the exercise library</label>
+        <input id="exercise-search" class="form-input" placeholder="Search by exercise, muscle, equipment, or movement…">
+
+        <div class="replacement-section">
+          <div class="replacement-title"><strong>Recommended alternatives</strong><span>${recommendations.length}</span></div>
+          <div id="recommended-replacements" class="replacement-list">
+            ${replacementButtons(recommendations)}
+          </div>
         </div>
 
-        <label class="form-label" for="custom-substitute">Custom replacement</label>
-        <input id="custom-substitute" class="form-input" value="${escapeHtml(current.performedName !== current.originalName ? current.performedName : "")}" placeholder="Example: Supported RDL">
-        <button class="primary-btn" id="save-substitute" type="button">Use custom replacement</button>
+        <div class="replacement-section">
+          <div class="replacement-title"><strong>All matching exercises</strong><span id="search-count">${EXERCISES.length}</span></div>
+          <div id="exercise-search-results" class="replacement-list replacement-scroll">
+            ${replacementButtons(EXERCISES.slice(0, 30))}
+          </div>
+        </div>
+
+        <div class="custom-replacement">
+          <label class="form-label" for="custom-substitute">Can’t find it? Record what you actually did</label>
+          <input id="custom-substitute" class="form-input" value="" placeholder="Example: Supported RDL">
+          <button class="secondary-btn" id="save-custom-substitute" type="button">Use custom exercise</button>
+        </div>
+
+        <button class="text-btn reset-exercise-btn" id="use-original-exercise" type="button">Use original exercise</button>
       </div>
     `);
 
-    modalRoot.querySelectorAll("[data-use-substitute]").forEach(button => {
-      button.onclick = () => {
-        current.performedName = button.dataset.useSubstitute;
-        saveState();
-        closeModal();
-        renderWorkout();
-      };
+    const chooseExercise = exerciseId => {
+      const selected = EXERCISE_MAP.get(exerciseId);
+      if (!selected) return;
+      current.performedExerciseId = selected.id;
+      current.performedName = selected.name;
+      current.equipment = selected.equipment;
+      const latest = getLastExercisePerformance(selected.id);
+      current.sets.forEach((set, index) => {
+        if (!set.done && !set.reps) set.weight = latest?.sets?.[index]?.weight ?? set.weight;
+      });
+      saveState();
+      closeModal();
+      renderWorkout();
+    };
+
+    modalRoot.querySelectorAll("[data-library-exercise]").forEach(button => {
+      button.onclick = () => chooseExercise(button.dataset.libraryExercise);
     });
 
-    modalRoot.querySelector("[data-use-original]").onclick = () => {
-      current.performedName = current.originalName;
+    document.getElementById("exercise-search").oninput = event => {
+      const query = event.target.value.trim().toLowerCase();
+      const matches = EXERCISES
+        .filter(exercise => {
+          const haystack = [
+            exercise.name,
+            exercise.primary,
+            ...(exercise.secondary || []),
+            exercise.pattern,
+            exercise.equipment
+          ].join(" ").toLowerCase();
+          return !query || haystack.includes(query);
+        })
+        .slice(0, 60);
+
+      document.getElementById("exercise-search-results").innerHTML = replacementButtons(matches);
+      document.getElementById("search-count").textContent = matches.length;
+      document.querySelectorAll("#exercise-search-results [data-library-exercise]").forEach(button => {
+        button.onclick = () => chooseExercise(button.dataset.libraryExercise);
+      });
+    };
+
+    document.getElementById("save-custom-substitute").onclick = () => {
+      const name = document.getElementById("custom-substitute").value.trim();
+      if (!name) return;
+      current.performedExerciseId = `custom:${slugify(name)}`;
+      current.performedName = name;
+      current.equipment = "Custom";
       saveState();
       closeModal();
       renderWorkout();
     };
 
-    document.getElementById("save-substitute").onclick = () => {
-      const value = document.getElementById("custom-substitute").value.trim();
-      if (!value) return;
-      current.performedName = value;
+    document.getElementById("use-original-exercise").onclick = () => {
+      current.performedExerciseId = current.originalExerciseId || slotExerciseId;
+      current.performedName = current.originalName || definition.name;
+      current.equipment = definition.equipment || "";
       saveState();
       closeModal();
       renderWorkout();
     };
+  }
+
+  function recommendedAlternatives(exerciseId) {
+    const source = EXERCISE_MAP.get(exerciseId) || libraryMatchForDefinition(getExerciseDefinition(exerciseId));
+    if (!source) return EXERCISES.slice(0, 12);
+
+    return EXERCISES
+      .filter(exercise => exercise.id !== source.id)
+      .map(exercise => {
+        let score = 0;
+        if (exercise.pattern === source.pattern) score += 8;
+        if (exercise.primary === source.primary) score += 6;
+        if ((exercise.secondary || []).includes(source.primary)) score += 2;
+        if ((source.secondary || []).includes(exercise.primary)) score += 2;
+        if (exercise.equipment === source.equipment) score += 1;
+        return { exercise, score };
+      })
+      .filter(item => item.score >= 5)
+      .sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name))
+      .slice(0, 12)
+      .map(item => item.exercise);
+  }
+
+  function replacementButtons(exercises) {
+    if (!exercises.length) return `<div class="empty-state compact">No exercises found.</div>`;
+
+    return exercises.map(exercise => `
+      <button class="replacement-option" data-library-exercise="${exercise.id}" type="button">
+        <span>
+          <strong>${escapeHtml(exercise.name)}</strong>
+          <small>${escapeHtml(exercise.primary)} · ${escapeHtml(exercise.pattern)}</small>
+        </span>
+        <span class="replacement-equipment">${escapeHtml(exercise.equipment)}</span>
+      </button>
+    `).join("");
+  }
+
+  function libraryMatchForDefinition(definition) {
+    if (!definition) return null;
+    const normalizedName = String(definition.name || "").toLowerCase();
+    return EXERCISES.find(exercise =>
+      exercise.id === definition.id ||
+      exercise.name.toLowerCase() === normalizedName
+    ) || null;
+  }
+
+  function slugify(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || makeId("exercise");
   }
 
   // -------------------------
@@ -1104,14 +1316,17 @@
         </div>
 
         <div class="calendar-exercise-list">
-          ${Object.entries(item.exercises || {}).map(([exerciseId, exerciseState]) => `
-            <button class="calendar-exercise calendar-exercise-button" data-history-exercise="${exerciseId}" type="button">
-              <strong>${escapeHtml(exerciseState.performedName || exerciseState.originalName)}</strong>
-              ${exerciseState.performedName !== exerciseState.originalName ? `<span class="muted small">Instead of ${escapeHtml(exerciseState.originalName)}</span>` : ""}
-              <div class="calendar-set-summary">${formatPreviousSets(exerciseState.sets)}</div>
-              ${exerciseState.notes ? `<p class="calendar-note"><strong>Note:</strong> ${escapeHtml(exerciseState.notes)}</p>` : ""}
-            </button>
-          `).join("")}
+          ${Object.entries(item.exercises || {}).map(([slotId, exerciseState]) => {
+            const performedId = exerciseState.performedExerciseId || exerciseState.originalExerciseId || slotId;
+            return `
+              <button class="calendar-exercise calendar-exercise-button" data-history-exercise="${escapeHtml(performedId)}" type="button">
+                <strong>${escapeHtml(exerciseState.performedName || exerciseState.originalName)}</strong>
+                ${exerciseState.performedName !== exerciseState.originalName ? `<span class="muted small">Instead of ${escapeHtml(exerciseState.originalName)}</span>` : ""}
+                <div class="calendar-set-summary">${formatPreviousSets(exerciseState.sets)}</div>
+                ${exerciseState.notes ? `<p class="calendar-note"><strong>Note:</strong> ${escapeHtml(exerciseState.notes)}</p>` : ""}
+              </button>
+            `;
+          }).join("")}
         </div>
 
         ${item.notes ? `<p class="session-note"><strong>Workout note:</strong> ${escapeHtml(item.notes)}</p>` : ""}
@@ -1278,16 +1493,23 @@
   }
 
   function exerciseRecords(exerciseId) {
-    return state.history
-      .filter(session => session.exercises?.[exerciseId])
-      .map(session => {
-        const exercise = session.exercises[exerciseId];
-        const completedSets = (exercise.sets || []).filter(set => set.done || set.weight || set.reps || set.rir !== "");
+    const records = [];
+
+    state.history.forEach(session => {
+      Object.entries(session.exercises || {}).forEach(([slotId, exerciseState]) => {
+        const performedId = exerciseState.performedExerciseId || exerciseState.originalExerciseId || slotId;
+        if (performedId !== exerciseId) return;
+
+        const completedSets = (exerciseState.sets || []).filter(set => set.done || set.weight || set.reps || set.rir !== "");
         const weightedSets = completedSets.filter(set => Number(set.weight) > 0 && Number(set.reps) > 0);
         const maxWeight = weightedSets.length ? Math.max(...weightedSets.map(set => Number(set.weight))) : 0;
         const volume = weightedSets.reduce((sum, set) => sum + Number(set.weight) * Number(set.reps), 0);
-        const rirValues = completedSets.filter(set => set.rir !== "" && set.rir != null).map(set => Number(set.rir));
-        const avgRir = rirValues.length ? rirValues.reduce((sum, value) => sum + value, 0) / rirValues.length : null;
+        const rirValues = completedSets
+          .filter(set => set.rir !== "" && set.rir != null)
+          .map(set => Number(set.rir));
+        const avgRir = rirValues.length
+          ? rirValues.reduce((sum, value) => sum + value, 0) / rirValues.length
+          : null;
 
         let bestSet = null;
         let bestScore = -Infinity;
@@ -1299,17 +1521,19 @@
           }
         });
 
-        return {
+        records.push({
           session,
-          exercise,
+          exercise: exerciseState,
           completedSets,
           maxWeight,
           volume,
           avgRir,
           bestSet
-        };
-      })
-      .sort((a, b) => (a.session.completedAt || 0) - (b.session.completedAt || 0));
+        });
+      });
+    });
+
+    return records.sort((a, b) => (a.session.completedAt || 0) - (b.session.completedAt || 0));
   }
 
   function renderExerciseHistory() {
@@ -1435,6 +1659,193 @@
     `;
   }
 
+  function renderCoach() {
+    title.textContent = "Coach";
+
+    const analysis = analyzeProgram();
+    const defaultQuestion = "What am I prioritizing, which muscles am I training, and what would you change in my routine?";
+
+    main.innerHTML = `
+      <section class="coach-hero">
+        <p class="kicker">Local program analysis</p>
+        <h2>Your routine at a glance</h2>
+        <p class="muted">This section analyzes the exercises and weekly volume saved in the app. It works offline and does not send your workout data anywhere.</p>
+      </section>
+
+      <div class="coach-grid">
+        <article class="coach-card">
+          <p class="kicker">Top priorities</p>
+          <h3>${escapeHtml(analysis.topMuscles.slice(0, 3).map(item => item.name).join(" · ") || "Not enough exercise data")}</h3>
+          <p>${escapeHtml(analysis.prioritySummary)}</p>
+        </article>
+
+        <article class="coach-card">
+          <p class="kicker">Movement balance</p>
+          <h3>${analysis.patternCount} movement patterns</h3>
+          <p>${escapeHtml(analysis.patternSummary)}</p>
+        </article>
+
+        <article class="coach-card">
+          <p class="kicker">Weekly workload</p>
+          <h3>${analysis.totalSets} programmed sets</h3>
+          <p>${escapeHtml(analysis.workloadSummary)}</p>
+        </article>
+
+        <article class="coach-card">
+          <p class="kicker">Potential blind spot</p>
+          <h3>${escapeHtml(analysis.blindSpotTitle)}</h3>
+          <p>${escapeHtml(analysis.blindSpotText)}</p>
+        </article>
+      </div>
+
+      <div class="section-heading"><h2>Muscle coverage</h2><span>Programmed sets</span></div>
+      <section class="coach-volume-card">
+        ${analysis.topMuscles.map(item => `
+          <div class="muscle-volume-row">
+            <span>${escapeHtml(item.name)}</span>
+            <div class="muscle-volume-track"><span style="width:${Math.max(5, Math.round(item.sets / analysis.maxSets * 100))}%"></span></div>
+            <strong>${Number.isInteger(item.sets) ? item.sets : item.sets.toFixed(1)}</strong>
+          </div>
+        `).join("")}
+      </section>
+
+      <div class="section-heading"><h2>Ask AI</h2><span>Uses ChatGPT</span></div>
+      <section class="coach-ask-card">
+        <p class="muted small">Write a question. The app will copy a structured summary of your routine and recent training, then open ChatGPT for you to paste it.</p>
+
+        <div class="coach-question-chips">
+          ${[
+            "What am I prioritizing?",
+            "Which muscles am I training?",
+            "Is my routine balanced?",
+            "What would you change for body recomposition?"
+          ].map(question => `<button class="text-btn" data-coach-question="${escapeHtml(question)}" type="button">${escapeHtml(question)}</button>`).join("")}
+        </div>
+
+        <textarea id="coach-question" class="coach-question-input" placeholder="Ask about your routine, exercise selection, muscles worked, or priorities…">${escapeHtml(defaultQuestion)}</textarea>
+        <button class="primary-btn" id="ask-chatgpt" type="button">Copy context & open ChatGPT</button>
+      </section>
+    `;
+
+    main.querySelectorAll("[data-coach-question]").forEach(button => {
+      button.onclick = () => {
+        document.getElementById("coach-question").value = button.dataset.coachQuestion;
+      };
+    });
+
+    document.getElementById("ask-chatgpt").onclick = async () => {
+      const question = document.getElementById("coach-question").value.trim() || defaultQuestion;
+      const prompt = buildCoachPrompt(question);
+
+      try {
+        await navigator.clipboard.writeText(prompt);
+        showToast("Routine context copied");
+      } catch {
+        window.prompt("Copy this prompt, then paste it into ChatGPT:", prompt);
+      }
+
+      window.open("https://chatgpt.com/", "_blank", "noopener");
+    };
+  }
+
+  function analyzeProgram() {
+    const muscleSets = new Map();
+    const patterns = new Set();
+    let totalSets = 0;
+    let unmatched = 0;
+
+    state.program.cycle.forEach(routineId => {
+      getRoutine(routineId)?.exercises.forEach(exercise => {
+        totalSets += Number(exercise.sets) || 0;
+        const meta = EXERCISE_MAP.get(exercise.id) || libraryMatchForDefinition(exercise);
+
+        if (!meta) {
+          unmatched += 1;
+          return;
+        }
+
+        patterns.add(meta.pattern);
+        muscleSets.set(meta.primary, (muscleSets.get(meta.primary) || 0) + Number(exercise.sets || 0));
+        (meta.secondary || []).forEach(muscle => {
+          muscleSets.set(muscle, (muscleSets.get(muscle) || 0) + Number(exercise.sets || 0) * 0.5);
+        });
+      });
+    });
+
+    const topMuscles = [...muscleSets.entries()]
+      .map(([name, sets]) => ({ name, sets }))
+      .sort((a, b) => b.sets - a.sets);
+
+    const maxSets = Math.max(1, ...topMuscles.map(item => item.sets));
+    const lowest = topMuscles.filter(item => item.sets > 0).slice(-3).map(item => item.name);
+    const highest = topMuscles.slice(0, 3).map(item => item.name);
+
+    return {
+      totalSets,
+      topMuscles,
+      maxSets,
+      patternCount: patterns.size,
+      prioritySummary: highest.length
+        ? `Your highest programmed volume currently goes to ${highest.join(", ")}.`
+        : "Add muscle tags through exercises from the library to improve this analysis.",
+      patternSummary: patterns.size >= 8
+        ? "Your routine covers a broad mix of pushes, pulls, squats, hinges, unilateral work, and isolation."
+        : "Your routine is relatively concentrated. Consider whether you want more movement variety or prefer deliberate specialization.",
+      workloadSummary: totalSets >= 50
+        ? "This is a fairly high-volume four-day plan, so recovery and consistent RIR tracking matter."
+        : totalSets >= 35
+          ? "This is a moderate weekly workload that should be manageable if sets are taken close to the intended effort."
+          : "This is a lower-volume plan. Progress will depend heavily on exercise quality and progressive overload.",
+      blindSpotTitle: unmatched
+        ? `${unmatched} custom exercise${unmatched === 1 ? "" : "s"} not classified`
+        : lowest[0] || "No obvious gap",
+      blindSpotText: unmatched
+        ? "Custom exercises are still tracked, but the local muscle analysis cannot classify them until they match an exercise in the library."
+        : lowest.length
+          ? `${lowest.join(", ")} receive less programmed volume than your main priorities. That may be intentional rather than a problem.`
+          : "The routine has enough classified exercise data for a basic balance check."
+    };
+  }
+
+  function buildCoachPrompt(question) {
+    const routineSummary = state.program.cycle.map(routineId => {
+      const routine = getRoutine(routineId);
+      return `${routine.name} (${routine.focus}): ` + routine.exercises
+        .map(exercise => `${exercise.name} — ${exercise.sets} sets of ${exercise.reps}, ${exercise.rest}s rest`)
+        .join("; ");
+    }).join("\n");
+
+    const recent = [...state.history]
+      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
+      .slice(0, 4)
+      .map(session => {
+        const exercises = Object.values(session.exercises || {})
+          .map(exercise => {
+            const sets = (exercise.sets || [])
+              .filter(set => set.done || set.weight || set.reps || set.rir !== "")
+              .map(set => `${set.weight || "—"}kg x ${set.reps || "—"} @ RIR ${set.rir === "" ? "—" : set.rir}`)
+              .join(", ");
+            return `${exercise.performedName}: ${sets}${exercise.notes ? ` | note: ${exercise.notes}` : ""}`;
+          })
+          .join("; ");
+        return `${session.date} — ${session.routineName}: ${exercises}`;
+      })
+      .join("\n");
+
+    return `Act as an evidence-informed strength coach focused on body recomposition. Be practical and do not overstate certainty.
+
+My current routine:
+${routineSummary}
+
+My most recent logged sessions:
+${recent || "No sessions logged yet."}
+
+My question:
+${question}
+
+Please answer using my actual exercise selection and volume. Explain which muscles and movement patterns are being prioritized, mention any relevant trade-offs, and give only actionable changes that are justified.`;
+  }
+
   // -------------------------
   // Settings and program editor
   // -------------------------
@@ -1450,8 +1861,10 @@
       <section class="panel">
         <p class="kicker">Experience</p>
         ${settingToggle("travel-setting", "Travel mode", "Show travel-friendly alternatives when a workout starts.", state.settings.travelMode)}
-        ${settingToggle("sound-setting", "Timer sound", "Play a short sound when your rest period ends.", state.settings.sound)}
+        ${settingToggle("sound-setting", "Timer sound", "Play a short chime when your rest period ends.", state.settings.sound)}
         ${settingToggle("vibration-setting", "Vibration", "Vibrate when the browser and device allow it.", state.settings.vibration)}
+        <button class="secondary-btn" id="test-sound" type="button" style="margin-top:12px">Enable & test timer sound</button>
+        <p class="muted small sound-help">Tap once after opening the app. This gives the browser permission to play the timer chime.</p>
       </section>
 
       <div class="section-heading"><h2>This week</h2><span>${escapeHtml(fmt.monthDay.format(dates[0]))} – ${escapeHtml(fmt.monthDay.format(dates[6]))}</span></div>
@@ -1502,10 +1915,16 @@
       </section>
 
       <section class="panel" style="margin-top:14px">
-        <p class="kicker">Recomp Studio+ 1.0</p>
-        <p class="muted small">Calendar activities · dated planner · editable routines · substitutions · exercise PRs · weekly summary · RIR and notes.</p>
+        <p class="kicker">Recomp Studio+ 2.0</p>
+        <p class="muted small">Today + Tomorrow · exercise library · safer sound setup · Coach tab · editable routines · PRs · RIR and notes.</p>
       </section>
     `;
+
+    document.getElementById("test-sound").onclick = async () => {
+      await ensureAudioReady(true);
+      playBeep();
+      showToast("Sound test played");
+    };
 
     document.getElementById("travel-setting").onchange = event => updateSetting("travelMode", event.target.checked);
     document.getElementById("sound-setting").onchange = event => updateSetting("sound", event.target.checked);
@@ -1815,47 +2234,55 @@
 
   function playBeep() {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const context = new AudioContext();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
+      if (!audioContext || audioContext.state !== "running") return;
 
-      oscillator.frequency.value = 740;
-      gain.gain.setValueAtTime(0.0001, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.2, context.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.25);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.26);
+      const now = audioContext.currentTime;
+      const master = audioContext.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.32, now + 0.02);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+      master.connect(audioContext.destination);
+
+      [
+        { frequency: 659.25, start: 0, duration: 0.24 },
+        { frequency: 880, start: 0.28, duration: 0.34 }
+      ].forEach(tone => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = tone.frequency;
+        gain.gain.setValueAtTime(0.0001, now + tone.start);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + tone.start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.start + tone.duration);
+        oscillator.connect(gain).connect(master);
+        oscillator.start(now + tone.start);
+        oscillator.stop(now + tone.start + tone.duration + 0.03);
+      });
     } catch {}
   }
 
-  timerPause.onclick = () => {
-    if (timer.running) {
-      timer.remaining = Math.max(0, (timer.endAt - Date.now()) / 1000);
-      timer.running = false;
-      timerPause.textContent = "Resume";
-    } else {
-      timer.running = true;
-      timer.endAt = Date.now() + timer.remaining * 1000;
-      timerPause.textContent = "Pause";
+  async function ensureAudioReady(force = false) {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return false;
+
+      if (!audioContext) audioContext = new AudioContext();
+      if (audioContext.state === "suspended") await audioContext.resume();
+
+      if ((force || !audioUnlocked) && audioContext.state === "running") {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        gain.gain.value = 0.00001;
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.02);
+      }
+
+      audioUnlocked = audioContext.state === "running";
+      return audioUnlocked;
+    } catch {
+      return false;
     }
-  };
-
-  document.getElementById("timer-subtract").onclick = () => adjustTimer(-15);
-  document.getElementById("timer-add").onclick = () => adjustTimer(15);
-  document.getElementById("timer-skip").onclick = stopTimer;
-
-  // -------------------------
-  // Modal and global events
-  // -------------------------
-  function openModal(content) {
-    modalRoot.innerHTML = `<div class="modal-backdrop">${content}</div>`;
-    modalRoot.querySelector("[data-close-modal]")?.addEventListener("click", closeModal);
-    modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", event => {
-      if (event.target.classList.contains("modal-backdrop")) closeModal();
-    });
-    document.body.classList.add("modal-open");
   }
 
   function closeModal() {
@@ -1878,6 +2305,10 @@
   document.querySelectorAll(".nav-item").forEach(button => {
     button.onclick = () => setView(button.dataset.view);
   });
+
+  document.addEventListener("pointerdown", () => {
+    ensureAudioReady();
+  }, { once: true });
 
   function showToast(message) {
     document.querySelector(".toast")?.remove();

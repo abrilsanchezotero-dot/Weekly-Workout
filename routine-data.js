@@ -1,5 +1,5 @@
 window.ROUTINE_DATA = {
-  appName: "Recomp Studio",
+  appName: "Recomp Studio+",
   cycle: ["push", "glutesHams", "pull", "quadsArms"],
   defaultSchedule: {
     "0": "rest",
@@ -22,6 +22,7 @@ window.ROUTINE_DATA = {
   },
   routines: {
     push: {
+      id: "push",
       name: "Day A — Push",
       shortName: "Push",
       focus: "Chest · shoulders · triceps",
@@ -86,6 +87,7 @@ window.ROUTINE_DATA = {
     },
 
     glutesHams: {
+      id: "glutesHams",
       name: "Day B — Glutes & Hamstrings",
       shortName: "Glutes",
       focus: "Glutes · hamstrings · posterior chain",
@@ -139,6 +141,7 @@ window.ROUTINE_DATA = {
     },
 
     pull: {
+      id: "pull",
       name: "Day C — Pull",
       shortName: "Pull",
       focus: "Back · rear delts · biceps",
@@ -205,6 +208,7 @@ window.ROUTINE_DATA = {
     },
 
     quadsArms: {
+      id: "quadsArms",
       name: "Day D — Legs & Arms",
       shortName: "Legs",
       focus: "Quads · calves · triceps",

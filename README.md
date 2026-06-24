@@ -1,31 +1,45 @@
-# Recomp Studio v2
+# Recomp Studio+
 
-A mobile-first Progressive Web App for a four-day body recomposition routine.
+A new, standalone version of the workout app.
 
-## New in this version
+## Included features
 
-- The entire app interface is in English.
-- A Calendar tab shows which days you trained and which workout you completed.
-- Every set includes three tracking fields: **Kg**, **Reps**, and **RIR**.
-- Every exercise has its own note field.
-- The next time an exercise appears, **Last time** shows:
-  - previous weight,
-  - previous reps,
-  - previous RIR,
-  - and the exercise note you saved.
-- Existing workout history is migrated automatically when possible.
+- English interface.
+- Rest timer with **−15** and **+15 seconds**.
+- Five navigation tabs with a visible Routines icon.
+- Routine buttons say **Start workout**.
+- Current-week dated planner.
+- Calendar with:
+  - completed workouts,
+  - free-text day notes,
+  - structured activities such as walks, Pilates, mobility, cardio, and sport.
+- Every working set records **Kg · Reps · RIR**.
+- Notes for every exercise.
+- “Last time” shows previous sets, RIR, substitution, and exercise note.
+- Temporary exercise substitutions saved in workout history.
+- Exercise-specific history, load trend, and personal records.
+- Weekly summary with comparison to the previous week.
+- Program editor inside the app:
+  - rename workouts,
+  - edit sets,
+  - edit rep ranges,
+  - edit rest times,
+  - reorder exercises,
+  - add or delete exercises,
+  - edit travel alternatives.
+- Offline support.
+- JSON backup export and import.
 
-## Uploading the update to GitHub
+## GitHub repository name
 
-Upload and replace these files in the root of the `recomp-studio` repository:
+Recommended:
 
-- `index.html`
-- `styles.css`
-- `app.js`
-- `routine-data.js`
-- `manifest.json`
-- `service-worker.js`
+`recomp-studio-plus`
 
-You can also upload the full project ZIP contents. Do not upload the ZIP itself.
+## Important
 
-After committing the files, GitHub Pages updates automatically. The new service-worker cache is named `recomp-studio-v2`.
+This version uses a new storage key, so it starts as a separate app. To move data from an older Recomp Studio page:
+
+1. Export a JSON backup from the old app.
+2. Open Recomp Studio+.
+3. Go to Settings → Import backup.

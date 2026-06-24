@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#FFFAF2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Recomp Studio">
-  <meta name="description" content="A personal body recomposition workout tracker with sets, RIR, notes, rest timers, history, and calendar.">
+  <meta name="apple-mobile-web-app-title" content="Recomp Studio+">
+  <meta name="description" content="A personal body recomposition workout planner and tracker with RIR, exercise notes, calendar, activities, progress, and editable routines.">
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
-  <title>Recomp Studio</title>
+  <title>Recomp Studio+</title>
 </head>
 <body>
   <div id="app">
@@ -32,13 +32,14 @@
     <main id="main-content" class="main-content" aria-live="polite"></main>
 
     <aside id="timer-panel" class="timer-panel hidden" aria-live="assertive">
-      <div>
+      <div class="timer-copy">
         <p class="timer-label">REST BREAK</p>
         <strong id="timer-value">01:30</strong>
       </div>
       <div class="timer-actions">
         <button id="timer-pause" type="button">Pause</button>
-        <button id="timer-add" type="button">+15 s</button>
+        <button id="timer-subtract" type="button">−15</button>
+        <button id="timer-add" type="button">+15</button>
         <button id="timer-skip" type="button">Skip</button>
       </div>
     </aside>
@@ -48,13 +49,13 @@
         <span class="nav-icon">♡</span><span>Today</span>
       </button>
       <button class="nav-item" data-view="routines" type="button">
-        <span class="nav-icon">◌</span><span>Routines</span>
+        <span class="nav-icon routine-nav-icon">🏋️</span><span>Routines</span>
       </button>
       <button class="nav-item" data-view="calendar" type="button">
         <span class="nav-icon">▦</span><span>Calendar</span>
       </button>
       <button class="nav-item" data-view="history" type="button">
-        <span class="nav-icon">↗</span><span>History</span>
+        <span class="nav-icon">↗</span><span>Progress</span>
       </button>
       <button class="nav-item" data-view="settings" type="button">
         <span class="nav-icon">⚙</span><span>Settings</span>
@@ -63,6 +64,8 @@
   </div>
 
   <input id="import-input" type="file" accept="application/json" hidden>
+  <div id="modal-root"></div>
+
   <script src="./routine-data.js"></script>
   <script src="./app.js"></script>
 </body>

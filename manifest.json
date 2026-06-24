@@ -1,7 +1,7 @@
 {
-  "name": "Recomp Studio",
-  "short_name": "Recomp",
-  "description": "A personal body recomposition workout tracker with sets, RIR, notes, rest timers, history, and calendar.",
+  "name": "Recomp Studio+",
+  "short_name": "Recomp+",
+  "description": "A personal body recomposition workout planner and tracker with RIR, notes, calendar activities, progress, and editable routines.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,7 +1,7 @@
 {
   "name": "Recomp Studio",
   "short_name": "Recomp",
-  "description": "Rutina personal de recomposición corporal con seguimiento de series, descansos e historial.",
+  "description": "A personal body recomposition workout tracker with sets, RIR, notes, rest timers, history, and calendar.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

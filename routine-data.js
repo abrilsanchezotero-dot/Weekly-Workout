@@ -11,244 +11,248 @@ window.ROUTINE_DATA = {
     "6": "rest"
   },
   recovery: {
-    title: "Recuperación activa",
+    title: "Active recovery",
     estimatedMinutes: 25,
     items: [
-      "Mantené tus pasos habituales sin agregar cardio intenso.",
-      "Hacé 5–10 minutos de movilidad suave si te sentís rígida.",
-      "Priorizá sueño, hidratación y proteína.",
-      "Si cambiás un día, usá “Siguiente entrenamiento” para continuar el ciclo."
+      "Keep your usual daily steps without adding intense cardio.",
+      "Do 5–10 minutes of gentle mobility if you feel stiff.",
+      "Prioritize sleep, hydration, and enough protein.",
+      "If your week changes, use “Next workout” to continue the cycle."
     ]
   },
   routines: {
     push: {
-      name: "Día A — Push",
-      focus: "Pecho · hombros · tríceps",
+      name: "Day A — Push",
+      shortName: "Push",
+      focus: "Chest · shoulders · triceps",
       estimatedMinutes: 48,
       exercises: [
         {
           id: "smith-bench-press",
-          name: "Press de Banca",
-          equipment: "Smith",
+          name: "Smith Machine Bench Press",
+          equipment: "Smith machine",
           sets: 4,
           reps: "6–10",
           targetMin: 6,
           targetMax: 10,
           rest: 120,
-          travel: "Press de pecho con mancuernas o press de piso"
+          travel: "Dumbbell bench press or dumbbell floor press"
         },
         {
           id: "lateral-raises",
-          name: "Elevaciones Laterales",
-          equipment: "Polea o mancuernas",
+          name: "Lateral Raises",
+          equipment: "Cable or dumbbells",
           sets: 3,
           reps: "12–20",
           targetMin: 12,
           targetMax: 20,
           rest: 60,
-          travel: "Elevaciones laterales con mancuernas o banda"
+          travel: "Dumbbell or resistance-band lateral raises"
         },
         {
           id: "overhead-cable-triceps",
-          name: "Extensión Overhead de Tríceps",
-          equipment: "Polea · cabeza larga",
+          name: "Overhead Triceps Extension",
+          equipment: "Cable · long head",
           sets: 3,
           reps: "10–15",
           targetMin: 10,
           targetMax: 15,
           rest: 75,
-          travel: "Extensión overhead con mancuerna o banda"
+          travel: "Overhead dumbbell or resistance-band triceps extension"
         },
         {
           id: "cable-triceps-pushdown",
-          name: "Tríceps Pushdown",
-          equipment: "Polea · cuerda o barra",
+          name: "Cable Triceps Pushdown",
+          equipment: "Rope or bar",
           sets: 3,
           reps: "12–15",
           targetMin: 12,
           targetMax: 15,
           rest: 60,
-          travel: "Pushdown con banda o flexiones con agarre cerrado"
+          travel: "Resistance-band pushdown or close-grip push-ups"
         },
         {
           id: "matrix-chest-fly",
-          name: "Chest Fly (opcional)",
-          equipment: "Matrix",
+          name: "Matrix Chest Fly (Optional)",
+          equipment: "Matrix machine",
           sets: 2,
           reps: "12–15",
           targetMin: 12,
           targetMax: 15,
           rest: 60,
-          travel: "Aperturas con mancuernas o banda"
+          travel: "Dumbbell or resistance-band chest fly"
         }
       ]
     },
 
     glutesHams: {
-      name: "Día B — Glúteos/Hams",
-      focus: "Glúteos · isquios · cadena posterior",
+      name: "Day B — Glutes & Hamstrings",
+      shortName: "Glutes",
+      focus: "Glutes · hamstrings · posterior chain",
       estimatedMinutes: 52,
       exercises: [
         {
           id: "romanian-deadlift",
-          name: "Peso Muerto Rumano",
-          equipment: "Barra o mancuernas",
+          name: "Romanian Deadlift",
+          equipment: "Barbell or dumbbells",
           sets: 4,
           reps: "8–10",
           targetMin: 8,
           targetMax: 10,
           rest: 120,
-          travel: "RDL con mancuernas"
+          travel: "Dumbbell Romanian deadlift"
         },
         {
           id: "bulgarian-split-squat",
-          name: "Sentadilla Búlgara",
-          equipment: "Mancuernas",
+          name: "Bulgarian Split Squat",
+          equipment: "Dumbbells",
           sets: 3,
-          reps: "8–12 por pierna",
+          reps: "8–12 each leg",
           targetMin: 8,
           targetMax: 12,
           rest: 90,
-          travel: "Sentadilla búlgara con mancuerna o peso corporal"
+          travel: "Dumbbell or bodyweight Bulgarian split squat"
         },
         {
           id: "leg-press-high-wide",
-          name: "Press de Piernas",
-          equipment: "Pies altos y abiertos",
+          name: "Leg Press",
+          equipment: "High and wide foot placement",
           sets: 3,
           reps: "10–15",
           targetMin: 10,
           targetMax: 15,
           rest: 90,
-          travel: "Sentadilla goblet con postura amplia"
+          travel: "Wide-stance goblet squat"
         },
         {
           id: "matrix-hamstring-curl",
-          name: "Curl de Isquios",
-          equipment: "Matrix",
+          name: "Matrix Hamstring Curl",
+          equipment: "Matrix machine",
           sets: 3,
           reps: "10–15",
           targetMin: 10,
           targetMax: 15,
           rest: 75,
-          travel: "Curl femoral deslizante con toalla o fitball"
+          travel: "Sliding hamstring curl with a towel or stability ball"
         }
       ]
     },
 
     pull: {
-      name: "Día C — Pull",
-      focus: "Espalda · deltoides posteriores · bíceps",
+      name: "Day C — Pull",
+      shortName: "Pull",
+      focus: "Back · rear delts · biceps",
       estimatedMinutes: 48,
       exercises: [
         {
           id: "lat-pulldown",
-          name: "Jalón al Pecho",
-          equipment: "Agarre ancho o neutro",
+          name: "Lat Pulldown",
+          equipment: "Wide or neutral grip",
           sets: 4,
           reps: "8–12",
           targetMin: 8,
           targetMax: 12,
           rest: 90,
-          travel: "Jalón con banda anclada arriba"
+          travel: "Resistance-band pulldown anchored overhead"
         },
         {
           id: "seated-cable-row",
-          name: "Remo Sentado",
-          equipment: "Polea · agarre neutro",
+          name: "Seated Cable Row",
+          equipment: "Neutral grip",
           sets: 3,
           reps: "10–12",
           targetMin: 10,
           targetMax: 12,
           rest: 90,
-          travel: "Remo unilateral con mancuerna"
+          travel: "One-arm dumbbell row"
         },
         {
           id: "rear-delt-fly-machine",
           name: "Rear Delt Fly",
-          equipment: "Máquina",
+          equipment: "Machine",
           sets: 3,
           reps: "12–20",
           targetMin: 12,
           targetMax: 20,
           rest: 60,
-          travel: "Vuelos posteriores inclinada con mancuernas"
+          travel: "Bent-over dumbbell rear delt fly"
         },
         {
           id: "hammer-curl",
           name: "Hammer Curl",
-          equipment: "Mancuernas",
+          equipment: "Dumbbells",
           sets: 3,
           reps: "10–12",
           targetMin: 10,
           targetMax: 12,
           rest: 15,
-          group: "Superserie",
-          travel: "Hammer curl con mancuernas o banda"
+          group: "Superset",
+          travel: "Dumbbell or resistance-band hammer curl"
         },
         {
           id: "reverse-hammer-curl",
           name: "Reverse Hammer Curl",
-          equipment: "Mancuernas",
+          equipment: "Dumbbells",
           sets: 3,
           reps: "10–12",
           targetMin: 10,
           targetMax: 12,
           rest: 60,
-          group: "Superserie",
-          travel: "Reverse curl con mancuernas o banda"
+          group: "Superset",
+          travel: "Dumbbell or resistance-band reverse curl"
         }
       ]
     },
 
     quadsArms: {
-      name: "Día D — Piernas/Brazos",
-      focus: "Cuádriceps · pantorrillas · tríceps",
+      name: "Day D — Legs & Arms",
+      shortName: "Legs",
+      focus: "Quads · calves · triceps",
       estimatedMinutes: 47,
       exercises: [
         {
           id: "heel-elevated-goblet-squat",
-          name: "Goblet Squat con Talones Elevados",
-          equipment: "Mancuerna",
+          name: "Heel-Elevated Goblet Squat",
+          equipment: "Dumbbell",
           sets: 3,
           reps: "10–15",
           targetMin: 10,
           targetMax: 15,
           rest: 90,
-          travel: "Goblet squat con talones elevados"
+          travel: "Heel-elevated goblet squat"
         },
         {
           id: "close-stance-split-or-sissy",
-          name: "Split Squat Cerrado / Sissy Squat",
-          equipment: "Elegí una variante",
+          name: "Close-Stance Split Squat / Sissy Squat",
+          equipment: "Choose one variation",
           sets: 3,
-          reps: "10–12 por pierna",
+          reps: "10–12 each leg",
           targetMin: 10,
           targetMax: 12,
           rest: 90,
-          travel: "Split squat cerrado o sissy squat asistida"
+          travel: "Close-stance split squat or assisted sissy squat"
         },
         {
           id: "standing-calf-raise",
-          name: "Elevación de Pantorrillas",
-          equipment: "Máquina de sentadilla",
+          name: "Standing Calf Raise",
+          equipment: "Squat machine",
           sets: 4,
           reps: "15–20",
           targetMin: 15,
           targetMax: 20,
           rest: 60,
-          travel: "Elevación de pantorrillas de pie con mancuerna"
+          travel: "Standing single-leg calf raise with a dumbbell"
         },
         {
           id: "skull-crushers",
           name: "Skull Crushers",
-          equipment: "Barra EZ",
+          equipment: "EZ bar",
           sets: 3,
           reps: "8–12",
           targetMin: 8,
           targetMax: 12,
           rest: 75,
-          travel: "Skull crushers con mancuernas"
+          travel: "Dumbbell skull crushers"
         }
       ]
     }
